@@ -22,10 +22,9 @@ job "redis" {
     }
 
     network {
-      mode = "bridge"
+      mode = "host"
 
       port "redis" {
-        to     = 6379
         static = 6379
       }
     }
@@ -39,10 +38,6 @@ job "redis" {
         type     = "tcp"
         interval = "10s"
         timeout  = "2s"
-      }
-
-      connect {
-        sidecar_service {}
       }
     }
 
