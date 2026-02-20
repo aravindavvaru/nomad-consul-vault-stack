@@ -76,7 +76,7 @@ processors:
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
-  index: "nomad-logs-%{+yyyy.MM.dd}"
+  index: "nomad-logs-%%{+yyyy.MM.dd}"
 
 logging.level: info
 logging.to_files: true
