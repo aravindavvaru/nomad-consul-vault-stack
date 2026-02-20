@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brew Services Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --started: #3fb950;
+      --stopped: #f85149;
+      --none: #484f58;
+      --accent: #58a6ff;
+      --btn-bg: #21262d;
+      --btn-hover: #30363d;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      padding: 32px 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h1 span.icon { font-size: 1.5rem; }
+
+    .meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .refresh-btn {
+      background: var(--btn-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: var(--btn-hover); }
+
+    .auto-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .auto-label select {
+      background: var(--btn-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 3px 6px;
+      font-size: 0.8rem;
+    }
+
+    .summary {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      text-align: center;
+      min-width: 100px;
+    }
+
+    .stat-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+    .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat.started .stat-value { color: var(--started); }
+    .stat.stopped .stat-value { color: var(--stopped); }
+    .stat.none-stat .stat-value { color: var(--none); }
+    .stat.total .stat-value { color: var(--accent); }
+
+    .search-bar {
+      margin-bottom: 16px;
+    }
+
+    .search-bar input {
+      width: 100%;
+      max-width: 360px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar input::placeholder { color: var(--muted); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: var(--surface); }
+    tbody tr:last-child { border-bottom: none; }
+
+    td { padding: 11px 14px; vertical-align: middle; }
+
+    td.name { font-weight: 500; font-family: "SFMono-Regular", Consolas, monospace; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .badge.started { background: rgba(63,185,80,0.15); color: var(--started); }
+    .badge.stopped { background: rgba(248,81,73,0.15); color: var(--stopped); }
+    .badge.none    { background: rgba(72,79,88,0.25);  color: var(--muted); }
+    .badge.error   { background: rgba(248,81,73,0.15); color: var(--stopped); }
+    .badge::before { content: "●"; font-size: 0.6rem; }
+
+    td.file-path {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .actions { display: flex; gap: 6px; }
+
+    .action-btn {
+      border: 1px solid var(--border);
+      background: var(--btn-bg);
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .action-btn:hover { background: var(--btn-hover); }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .action-btn.start  { border-color: rgba(63,185,80,0.4); }
+    .action-btn.start:hover  { background: rgba(63,185,80,0.12); }
+    .action-btn.stop   { border-color: rgba(248,81,73,0.4); }
+    .action-btn.stop:hover   { background: rgba(248,81,73,0.12); }
+    .action-btn.restart { border-color: rgba(88,166,255,0.4); }
+    .action-btn.restart:hover { background: rgba(88,166,255,0.12); }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      max-width: 340px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok   { border-left: 3px solid var(--started); }
+    .toast.err  { border-left: 3px solid var(--stopped); }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg {
+      color: var(--stopped);
+      padding: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .last-updated {
+      font-size: 0.75rem;
+      color: var(--none);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1><span class="icon">🍺</span> Brew Services Dashboard</h1>
+  <div class="controls">
+    <span class="last-updated" id="lastUpdated"></span>
+    <button class="refresh-btn" id="refreshBtn" onclick="fetchServices()">↻ Refresh</button>
+    <label class="auto-label">
+      Auto-refresh:
+      <select id="autoInterval" onchange="setAutoRefresh()">
+        <option value="0">Off</option>
+        <option value="5">5s</option>
+        <option value="10" selected>10s</option>
+        <option value="30">30s</option>
+        <option value="60">60s</option>
+      </select>
+    </label>
+  </div>
+</header>
+
+<div class="summary" id="summary"></div>
+
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="Filter services…" oninput="renderTable()" />
+</div>
+
+<table id="servicesTable">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Status</th>
+      <th>User</th>
+      <th>Plist File</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let allServices = [];
+  let autoTimer = null;
+
+  async function fetchServices() {
+    const btn = document.getElementById("refreshBtn");
+    btn.innerHTML = '<span class="spinner"></span>Loading';
+    btn.disabled = true;
+    try {
+      const res = await fetch("/api/services");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allServices = await res.json();
+      renderSummary();
+      renderTable();
+      document.getElementById("lastUpdated").textContent =
+        "Updated " + new Date().toLocaleTimeString();
+    } catch (e) {
+      document.getElementById("tbody").innerHTML =
+        `<tr><td colspan="5" class="error-msg">Failed to load services: ${e.message}</td></tr>`;
+    } finally {
+      btn.innerHTML = "↻ Refresh";
+      btn.disabled = false;
+    }
+  }
+
+  function renderSummary() {
+    const counts = { started: 0, stopped: 0, none: 0 };
+    allServices.forEach(s => {
+      if (s.status === "started") counts.started++;
+      else if (s.status === "none") counts.none++;
+      else counts.stopped++;
+    });
+    document.getElementById("summary").innerHTML = `
+      <div class="stat total"><div class="stat-value">${allServices.length}</div><div class="stat-label">Total</div></div>
+      <div class="stat started"><div class="stat-value">${counts.started}</div><div class="stat-label">Running</div></div>
+      <div class="stat stopped"><div class="stat-value">${counts.stopped}</div><div class="stat-label">Stopped</div></div>
+      <div class="stat none-stat"><div class="stat-value">${counts.none}</div><div class="stat-label">None</div></div>
+    `;
+  }
+
+  function renderTable() {
+    const q = document.getElementById("searchInput").value.toLowerCase();
+    const filtered = q
+      ? allServices.filter(s => s.name.toLowerCase().includes(q) || s.status.toLowerCase().includes(q))
+      : allServices;
+
+    const tbody = document.getElementById("tbody");
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">No services match.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(s => {
+      const isStarted = s.status === "started";
+      const isNone = s.status === "none";
+      const badgeClass = isStarted ? "started" : isNone ? "none" : "stopped";
+      const filePath = s.file ? s.file.replace(/^~/, "~") : "—";
+
+      return `
+        <tr>
+          <td class="name">${esc(s.name)}</td>
+          <td><span class="badge ${badgeClass}">${esc(s.status)}</span></td>
+          <td style="color:var(--muted);font-size:0.85rem">${esc(s.user) || "—"}</td>
+          <td class="file-path" title="${esc(s.file)}">${esc(filePath)}</td>
+          <td>
+            <div class="actions">
+              <button class="action-btn start" onclick="serviceAction('${esc(s.name)}','start')" ${isStarted ? "disabled" : ""}>Start</button>
+              <button class="action-btn stop"  onclick="serviceAction('${esc(s.name)}','stop')"  ${!isStarted ? "disabled" : ""}>Stop</button>
+              <button class="action-btn restart" onclick="serviceAction('${esc(s.name)}','restart')" ${!isStarted ? "disabled" : ""}>Restart</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join("");
+  }
+
+  async function serviceAction(name, action) {
+    showToast(`Running: brew services ${action} ${name}…`, "");
+    try {
+      const res = await fetch(`/api/services/${encodeURIComponent(name)}/${action}`, { method: "POST" });
+      const data = await res.json();
+      showToast(data.output || (data.ok ? "Done." : "Failed."), data.ok ? "ok" : "err");
+      if (data.ok) setTimeout(fetchServices, 800);
+    } catch (e) {
+      showToast(`Error: ${e.message}`, "err");
+    }
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "toast show" + (type ? " " + type : "");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove("show"), 4000);
+  }
+
+  function setAutoRefresh() {
+    clearInterval(autoTimer);
+    const secs = parseInt(document.getElementById("autoInterval").value);
+    if (secs > 0) autoTimer = setInterval(fetchServices, secs * 1000);
+  }
+
+  function esc(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  fetchServices();
+  setAutoRefresh();
+</script>
+</body>
+</html>
